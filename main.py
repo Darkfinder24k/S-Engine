@@ -152,7 +152,7 @@ def set_background(image_file):
 # set_background('futuristic_background.png')
 
 # --- Main Application ---
-st.title("Quantora :neuron:")
+st.title("⚛️ Quantora Search Engine")
 st.subheader("Intelligent Information Synthesis")
 
 query = st.text_input("Enter your Quantora query:", "")
