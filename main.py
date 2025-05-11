@@ -28,7 +28,7 @@ def create_redirect_url(target_url):
 
 # --- Futuristic UI Styling ---
 st.set_page_config(
-    page_title="Quantora :neuron:",
+    page_title="⚛️ Quantora Search Engine",
     page_icon=":neuron:",
     layout="wide",
     initial_sidebar_state="collapsed",
