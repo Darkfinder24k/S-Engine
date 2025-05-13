@@ -6,7 +6,7 @@ import base64  # For background image
 API_KEY = "AIzaSyCZ-1xA0qHy7p3l5VdZYCrvoaQhpMZLjig"  # Your API key
 SEARCH_ENGINE_ID = "c38572640fa0441bc"  # Your Search Engine ID
 
-# --- Your Website URL (for redirection) ---
+# --- Your Website URL (for potential internal redirection logic - not directly used for iframe) ---
 YOUR_WEBSITE_URL = "https://yourwebsite.com/"  # Replace with your actual website URL
 
 # --- Function to Fetch Search Results ---
@@ -20,11 +20,16 @@ def fetch_quantora_results(search_term, api_key, cse_id, **kwargs):
         st.error(f"Quantora encountered a data retrieval anomaly: {e}")
         return []
 
-# --- Function to create a redirect URL ---
-def create_redirect_url(target_url):
-    # This is a basic example. You might need a more sophisticated
-    # redirection mechanism on your website.
-    return f"{YOUR_WEBSITE_URL}redirect?url={target_url}"
+# --- Function to Fetch Image Results ---
+@st.cache_data(show_spinner=False)
+def fetch_image_results(search_term, api_key, cse_id, num_images=3):
+    try:
+        service = build("customsearch", "v1", developerKey=api_key)
+        res = service.cse().list(q=search_term, cx=cse_id, searchType='image', num=num_images).execute()
+        return res.get("items", [])
+    except Exception as e:
+        st.error(f"Quantora encountered an image retrieval anomaly: {e}")
+        return []
 
 # --- Futuristic UI Styling ---
 st.set_page_config(
@@ -84,7 +89,7 @@ st.markdown(
             border: 1px solid #384459;
         }
 
-        .st-emotion-cache-16txtl3 { /* Link style */
+        .st-emotion-cache-16txtl3 { /* Link style - now a button */
             color: #bae6fd;
             text-decoration: none;
         }
@@ -126,6 +131,35 @@ st.markdown(
             color: #f0f8ff;
             font-weight: bold;
         }
+
+        .image-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            overflow-x: auto; /* Enable horizontal scrolling for many images */
+        }
+
+        .image-container img {
+            max-width: 150px;
+            height: auto;
+            border-radius: 4px;
+            box-shadow: 2px 2px 5px #00000020;
+        }
+
+        .iframe-container {
+            width: 100%;
+            height: 600px; /* Adjust height as needed */
+            border: 1px solid #384459;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+        }
     </style>
     """,
     unsafe_allow_html=True,
@@ -161,24 +195,44 @@ if query:
     st.info(f"Quantora is processing your request for: '{query}'...")
 
     # Fetch search results
-    results = fetch_quantora_results(query, API_KEY, SEARCH_ENGINE_ID, num=10)
+    results = fetch_quantora_results(query, API_KEY, SEARCH_ENGINE_ID, num=5) # Reduced number of text results
 
+    # Fetch image results
+    image_results = fetch_image_results(query, API_KEY, SEARCH_ENGINE_ID, num_images=5)
+
+    st.subheader("Quantora Insights:")
     if results:
-        st.subheader("Quantora Insights:")
         for i, result in enumerate(results):
             title = result.get('title', 'No Title')
             link = result.get('link', '#')
             snippet = result.get('snippet', 'No Description')
 
-            # Create the redirect URL
-            redirect_url = create_redirect_url(link)
-
             st.markdown(f"<div class='st-emotion-cache-r421ms'><strong>{i+1}. {title}</strong></div>", unsafe_allow_html=True)
-            st.markdown(f"<a class='st-emotion-cache-16txtl3' href='{redirect_url}' target='_blank'>{link}</a>", unsafe_allow_html=True)
             st.markdown(f"<p class='st-emotion-cache-10pw50'>{snippet}</p>", unsafe_allow_html=True)
+            # Instead of a direct link, create a button that updates the iframe source
+            if st.button(f"Open: {link}", key=f"link_button_{i}"):
+                st.session_state['iframe_url'] = link
             st.divider()
     else:
         st.warning("Quantora found no relevant insights for this query.")
+
+    if image_results:
+        st.subheader("Related Images:")
+        st.markdown("<div class='image-container'>", unsafe_allow_html=True)
+        for image_result in image_results:
+            image_url = image_result.get('link')
+            if image_url:
+                st.markdown(f"<img src='{image_url}' alt='Related Image'>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    elif query and not results: # Only show if a query was made and no text results
+        st.info("No related images found.")
+
+    # Display the iframe if a URL is stored in the session state
+    if 'iframe_url' in st.session_state:
+        st.subheader("Website Preview:")
+        st.markdown(f"<div class='iframe-container'><iframe src='{st.session_state['iframe_url']}'></iframe></div>", unsafe_allow_html=True)
+    elif query and results:
+        st.info("Click on a 'Open' button above to preview the website here.")
 
 # --- Sidebar for Advanced Options (Optional) ---
 with st.sidebar:
@@ -189,7 +243,8 @@ with st.sidebar:
     else:
         safe_level = "off"
 
-    results_count = st.slider("Insight Stream Limit (Results per page):", min_value=1, max_value=20, value=10)
+    results_count = st.slider("Insight Stream Limit (Results per page):", min_value=1, max_value=20, value=5) # Adjusted default
+    image_count = st.slider("Image Stream Limit:", min_value=1, max_value=10, value=5)
 
     st.markdown("---")
     st.markdown("<p style='color:#d1d5db; font-size:12px;'>Powered by Quantora's Neural Network</p>", unsafe_allow_html=True)
