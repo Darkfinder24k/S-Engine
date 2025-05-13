@@ -22,7 +22,7 @@ def fetch_quantora_results(search_term, api_key, cse_id, **kwargs):
 
 # --- Function to Fetch Image Results ---
 @st.cache_data(show_spinner=False)
-def fetch_image_results(search_term, api_key, cse_id, num_images=5):
+def fetch_image_results(search_term, api_key, cse_id, num_images=1): # Fetching only 1 image per shopping item
     try:
         service = build("customsearch", "v1", developerKey=api_key)
         res = service.cse().list(q=search_term, cx=cse_id, searchType='image', num=num_images).execute()
@@ -39,7 +39,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", # Sidebar will be open by default
 )
 
-# Custom CSS (same as before)
+# Custom CSS
 st.markdown(
     """
     <style>
@@ -80,42 +80,49 @@ st.markdown(
             background-color: #8b5cf6;
         }
 
-        .st-emotion-cache-r421ms { /* Result container */
+        .marketplace-item {
+            display: flex;
+            align-items: center;
             background-color: #1e212b;
             color: #f0f8ff;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
             border-radius: 8px;
             border: 1px solid #384459;
         }
 
-        .st-emotion-cache-16txtl3 { /* Link style - now a button */
+        .marketplace-item-details {
+            flex-grow: 1;
+            margin-right: 15px;
+        }
+
+        .marketplace-item-image {
+            max-width: 100px;
+            height: auto;
+            border-radius: 4px;
+            box-shadow: 2px 2px 5px #00000020;
+        }
+
+        .marketplace-item strong {
+            font-size: 1.1em;
+        }
+
+        .marketplace-item a {
             color: #bae6fd;
             text-decoration: none;
         }
 
-        .st-emotion-cache-16txtl3:hover {
+        .marketplace-item a:hover {
             text-decoration: underline;
         }
 
-        .st-emotion-cache-10pw50 { /* Snippet style */
+        .marketplace-item p {
             color: #d1d5db;
-            font-size: 14px;
+            font-size: 0.9em;
         }
 
-        h1 {
-            color: #a78bfa;
-            text-align: center;
-            margin-bottom: 30px;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        h2 {
+        h1, h2, h3 {
             color: #f0f8ff;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            font-weight: bold;
         }
 
         .sidebar .sidebar-content {
@@ -125,41 +132,6 @@ st.markdown(
 
         .sidebar h2 {
             color: #a78bfa;
-        }
-
-        .st-emotion-cache-1dp50ho { /* Expander header */
-            color: #f0f8ff;
-            font-weight: bold;
-        }
-
-        .image-container {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            overflow-x: auto; /* Enable horizontal scrolling for many images */
-        }
-
-        .image-container img {
-            max-width: 150px;
-            height: auto;
-            border-radius: 4px;
-            box-shadow: 2px 2px 5px #00000020;
-        }
-
-        .inline-iframe-container {
-            width: 100%;
-            height: 400px; /* Adjust height as needed */
-            border: 1px solid #384459;
-            border-radius: 8px;
-            margin-top: 10px;
-            margin-bottom: 15px;
-        }
-
-        .inline-iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 8px;
         }
     </style>
     """,
@@ -266,14 +238,23 @@ elif st.session_state['current_page'] == "marketplace":
         st.subheader(f"Shopping Results for: '{query}'")
         shopping_results = fetch_quantora_results(shopping_query, API_KEY, SEARCH_ENGINE_ID, num=5) # Fetch potential shopping results
         if shopping_results:
-            for i, result in enumerate(shopping_results):
+            for result in shopping_results:
                 title = result.get('title', 'No Product Title')
                 link = result.get('link', '#')
                 snippet = result.get('snippet', 'No Description Available')
-                st.markdown(f"<div class='st-emotion-cache-r421ms'><strong>{i+1}. {title}</strong></div>", unsafe_allow_html=True)
-                st.markdown(f"<a class='st-emotion-cache-16txtl3' href='{link}' target='_blank'>{link}</a>", unsafe_allow_html=True) # Open in new tab for shopping
-                st.markdown(f"<p class='st-emotion-cache-10pw50'>{snippet}</p>", unsafe_allow_html=True)
-                st.divider()
+                image_results = fetch_image_results(title, API_KEY, SEARCH_ENGINE_ID, num_images=1) # Fetch image for the title
+                image_url = image_results[0].get('link') if image_results else None
+
+                st.markdown(f"""
+                    <div class='marketplace-item'>
+                        <div class='marketplace-item-details'>
+                            <strong>{title}</strong><br>
+                            <a href='{link}' target='_blank'>{link}</a><br>
+                            <p>{snippet}</p>
+                        </div>
+                        {'<img src="' + image_url + '" alt="' + title + '" class="marketplace-item-image">' if image_url else ''}
+                    </div>
+                    """, unsafe_allow_html=True)
         else:
             st.info(f"No specific shopping results found for '{query}'.")
     else:
