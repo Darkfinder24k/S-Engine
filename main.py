@@ -22,7 +22,7 @@ def fetch_quantora_results(search_term, api_key, cse_id, **kwargs):
 
 # --- Function to Fetch Image Results ---
 @st.cache_data(show_spinner=False)
-def fetch_image_results(search_term, api_key, cse_id, num_images=3):
+def fetch_image_results(search_term, api_key, cse_id, num_images=5):
     try:
         service = build("customsearch", "v1", developerKey=api_key)
         res = service.cse().list(q=search_term, cx=cse_id, searchType='image', num=num_images).execute()
@@ -39,7 +39,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", # Sidebar will be open by default
 )
 
-# Custom CSS for a premium, futuristic look (same as before)
+# Custom CSS (same as before)
 st.markdown(
     """
     <style>
@@ -207,6 +207,7 @@ with st.sidebar:
 # --- Main Application Logic Based on Sidebar Selection ---
 if 'current_page' not in st.session_state:
     st.session_state['current_page'] = "insights" # Default page
+    st.session_state['last_search_query'] = ""
 
 if st.session_state['current_page'] == "insights":
     st.title("⚛️ Quantora Search Engine")
@@ -215,13 +216,11 @@ if st.session_state['current_page'] == "insights":
     query = st.text_input("Enter your Quantora query:", "")
 
     if query:
+        st.session_state['last_search_query'] = query # Store the search query
         st.info(f"Quantora is processing your request for: '{query}'...")
 
         # Fetch search results
         results = fetch_quantora_results(query, API_KEY, SEARCH_ENGINE_ID, num=3) # Reduced number of text results
-
-        # Fetch image results
-        image_results = fetch_image_results(query, API_KEY, SEARCH_ENGINE_ID, num_images=3)
 
         st.subheader("Quantora Insights:")
         if results:
@@ -234,32 +233,48 @@ if st.session_state['current_page'] == "insights":
                 st.markdown(f"<p class='st-emotion-cache-10pw50'>{snippet}</p>", unsafe_allow_html=True)
                 if st.button(f"View: {link}", key=f"view_link_{i}"):
                     st.session_state['inline_iframe_url'] = link
-                    # Force a rerun to display the iframe immediately after the button
                     st.rerun()
                 if 'inline_iframe_url' in st.session_state and st.session_state['inline_iframe_url'] == link:
                     st.markdown(f"<div class='inline-iframe-container'><iframe src='{link}'></iframe></div>", unsafe_allow_html=True)
-                    del st.session_state['inline_iframe_url'] # Clear after displaying once
+                    del st.session_state['inline_iframe_url']
                 st.divider()
         else:
             st.warning("Quantora found no relevant insights for this query.")
 
+elif st.session_state['current_page'] == "visual_media":
+    st.title("🖼️ Quantora Visual Media Hub")
+    if 'last_search_query' in st.session_state and st.session_state['last_search_query']:
+        st.subheader(f"Related Images for: '{st.session_state['last_search_query']}'")
+        image_results = fetch_image_results(st.session_state['last_search_query'], API_KEY, SEARCH_ENGINE_ID, num_images=10) # Increased number of images
         if image_results:
-            st.subheader("Related Visual Media:")
             st.markdown("<div class='image-container'>", unsafe_allow_html=True)
             for image_result in image_results:
                 image_url = image_result.get('link')
                 if image_url:
                     st.markdown(f"<img src='{image_url}' alt='Related Image'>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
-        elif query and not results: # Only show if a query was made and no text results
-            st.info("No related visual media found.")
-
-elif st.session_state['current_page'] == "visual_media":
-    st.title("🖼️ Quantora Visual Media Hub")
-    st.write("Content related to visual media will be displayed here.")
-    # Add your visual media specific content here
+        else:
+            st.info(f"No related images found for '{st.session_state['last_search_query']}'.")
+    else:
+        st.info("Search for a topic on the 'Insights' page to see related images here.")
 
 elif st.session_state['current_page'] == "marketplace":
     st.title("🛒 Quantora Marketplace")
-    st.write("Explore offerings in the Quantora marketplace.")
-    # Add your marketplace specific content here
+    query = st.session_state.get('last_search_query', '')
+    if query:
+        shopping_query = f"{query} buy shop price" # Append shopping-related keywords
+        st.subheader(f"Shopping Results for: '{query}'")
+        shopping_results = fetch_quantora_results(shopping_query, API_KEY, SEARCH_ENGINE_ID, num=5) # Fetch potential shopping results
+        if shopping_results:
+            for i, result in enumerate(shopping_results):
+                title = result.get('title', 'No Product Title')
+                link = result.get('link', '#')
+                snippet = result.get('snippet', 'No Description Available')
+                st.markdown(f"<div class='st-emotion-cache-r421ms'><strong>{i+1}. {title}</strong></div>", unsafe_allow_html=True)
+                st.markdown(f"<a class='st-emotion-cache-16txtl3' href='{link}' target='_blank'>{link}</a>", unsafe_allow_html=True) # Open in new tab for shopping
+                st.markdown(f"<p class='st-emotion-cache-10pw50'>{snippet}</p>", unsafe_allow_html=True)
+                st.divider()
+        else:
+            st.info(f"No specific shopping results found for '{query}'.")
+    else:
+        st.info("Search for a topic on the 'Insights' page to see potential shopping options here.")
