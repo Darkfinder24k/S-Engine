@@ -133,6 +133,22 @@ st.markdown(
         .sidebar h2 {
             color: #a78bfa;
         }
+
+        .inline-iframe-container {
+            width: 100%;
+            height: 800px; /* Increased height to make websites appear larger */
+            border: 1px solid #384459;
+            border-radius: 8px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .inline-iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+        }
     </style>
     """,
     unsafe_allow_html=True,
