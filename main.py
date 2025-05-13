@@ -197,7 +197,7 @@ if 'current_page' not in st.session_state:
     st.session_state['current_page'] = "insights" # Default page
     st.session_state['last_search_query'] = ""
 
-if st.session_state['current_page'] == "insights":
+elif st.session_state['current_page'] == "insights":
     st.title("⚛️ Quantora Search Engine")
     st.subheader("Intelligent Information Synthesis")
 
@@ -228,6 +228,23 @@ if st.session_state['current_page'] == "insights":
                 st.divider()
         else:
             st.warning("Quantora found no relevant insights for this query.")
+
+    st.subheader("Open a Specific URL")
+    direct_url = st.text_input("Enter a URL to open:", "")
+    open_url_button = st.button("Open URL")
+
+    if open_url_button and direct_url:
+        st.session_state['inline_iframe_url'] = direct_url
+        st.rerun()
+
+    if 'inline_iframe_url' in st.session_state and 'last_viewed_url' not in st.session_state:
+        st.subheader("Website Preview:")
+        st.markdown(f"<div class='inline-iframe-container'><iframe src='{st.session_state['inline_iframe_url']}'></iframe></div>", unsafe_allow_html=True)
+        st.session_state['last_viewed_url'] = st.session_state['inline_iframe_url'] # To avoid re-rendering on every rerun
+    elif 'inline_iframe_url' in st.session_state and st.session_state['inline_iframe_url'] != st.session_state.get('last_viewed_url'):
+        st.subheader("Website Preview:")
+        st.markdown(f"<div class='inline-iframe-container'><iframe src='{st.session_state['inline_iframe_url']}'></iframe></div>", unsafe_allow_html=True)
+        st.session_state['last_viewed_url'] = st.session_state['inline_iframe_url']
 
 elif st.session_state['current_page'] == "visual_media":
     st.title("🖼️ Quantora Visual Media Hub")
