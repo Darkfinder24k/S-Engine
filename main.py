@@ -6,7 +6,7 @@ import base64  # For background image
 API_KEY = "AIzaSyCZ-1xA0qHy7p3l5VdZYCrvoaQhpMZLjig"  # Your API key
 SEARCH_ENGINE_ID = "c38572640fa0441bc"  # Your Search Engine ID
 
-# --- Your Website URL (for potential internal redirection logic - not directly used for iframe) ---
+# --- Your Website URL (not directly used for iframe) ---
 YOUR_WEBSITE_URL = "https://yourwebsite.com/"  # Replace with your actual website URL
 
 # --- Function to Fetch Search Results ---
@@ -33,10 +33,10 @@ def fetch_image_results(search_term, api_key, cse_id, num_images=3):
 
 # --- Futuristic UI Styling ---
 st.set_page_config(
-    page_title="⚛️ Quantora Search Engine",
+    page_title="⚛️ Quantora",
     page_icon=":neuron:",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded", # Sidebar will be open by default
 )
 
 # Custom CSS for a premium, futuristic look (same as before)
@@ -146,15 +146,16 @@ st.markdown(
             box-shadow: 2px 2px 5px #00000020;
         }
 
-        .iframe-container {
+        .inline-iframe-container {
             width: 100%;
-            height: 600px; /* Adjust height as needed */
+            height: 400px; /* Adjust height as needed */
             border: 1px solid #384459;
             border-radius: 8px;
-            margin-top: 20px;
+            margin-top: 10px;
+            margin-bottom: 15px;
         }
 
-        .iframe-container iframe {
+        .inline-iframe-container iframe {
             width: 100%;
             height: 100%;
             border: none;
@@ -185,66 +186,80 @@ def set_background(image_file):
 
 # set_background('futuristic_background.png')
 
-# --- Main Application ---
-st.title("⚛️ Quantora Search Engine")
-st.subheader("Intelligent Information Synthesis")
-
-query = st.text_input("Enter your Quantora query:", "")
-
-if query:
-    st.info(f"Quantora is processing your request for: '{query}'...")
-
-    # Fetch search results
-    results = fetch_quantora_results(query, API_KEY, SEARCH_ENGINE_ID, num=5) # Reduced number of text results
-
-    # Fetch image results
-    image_results = fetch_image_results(query, API_KEY, SEARCH_ENGINE_ID, num_images=5)
-
-    st.subheader("Quantora Insights:")
-    if results:
-        for i, result in enumerate(results):
-            title = result.get('title', 'No Title')
-            link = result.get('link', '#')
-            snippet = result.get('snippet', 'No Description')
-
-            st.markdown(f"<div class='st-emotion-cache-r421ms'><strong>{i+1}. {title}</strong></div>", unsafe_allow_html=True)
-            st.markdown(f"<p class='st-emotion-cache-10pw50'>{snippet}</p>", unsafe_allow_html=True)
-            # Instead of a direct link, create a button that updates the iframe source
-            if st.button(f"Open: {link}", key=f"link_button_{i}"):
-                st.session_state['iframe_url'] = link
-            st.divider()
-    else:
-        st.warning("Quantora found no relevant insights for this query.")
-
-    if image_results:
-        st.subheader("Related Images:")
-        st.markdown("<div class='image-container'>", unsafe_allow_html=True)
-        for image_result in image_results:
-            image_url = image_result.get('link')
-            if image_url:
-                st.markdown(f"<img src='{image_url}' alt='Related Image'>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-    elif query and not results: # Only show if a query was made and no text results
-        st.info("No related images found.")
-
-    # Display the iframe if a URL is stored in the session state
-    if 'iframe_url' in st.session_state:
-        st.subheader("Website Preview:")
-        st.markdown(f"<div class='iframe-container'><iframe src='{st.session_state['iframe_url']}'></iframe></div>", unsafe_allow_html=True)
-    elif query and results:
-        st.info("Click on a 'Open' button above to preview the website here.")
-
-# --- Sidebar for Advanced Options (Optional) ---
+# --- Sidebar Navigation ---
 with st.sidebar:
-    st.header("Quantora Core Settings")
-    safe_search = st.checkbox("Engage Neural Filtering (Filter Explicit Content)", value=True)
-    if safe_search:
-        safe_level = "active"
-    else:
-        safe_level = "off"
+    st.header("Quantora Navigation")
+    page = st.radio(
+        "Explore:",
+        ["Insights", "Visual Media", "Marketplace"],
+    )
 
-    results_count = st.slider("Insight Stream Limit (Results per page):", min_value=1, max_value=20, value=5) # Adjusted default
-    image_count = st.slider("Image Stream Limit:", min_value=1, max_value=10, value=5)
+    if page == "Insights":
+        st.session_state['current_page'] = "insights"
+    elif page == "Visual Media":
+        st.session_state['current_page'] = "visual_media"
+    elif page == "Marketplace":
+        st.session_state['current_page'] = "marketplace"
 
     st.markdown("---")
-    st.markdown("<p style='color:#d1d5db; font-size:12px;'>Powered by Quantora's Neural Network</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#d1d5db; font-size:12px;'>Powered by Quantora</p>", unsafe_allow_html=True)
+
+# --- Main Application Logic Based on Sidebar Selection ---
+if 'current_page' not in st.session_state:
+    st.session_state['current_page'] = "insights" # Default page
+
+if st.session_state['current_page'] == "insights":
+    st.title("⚛️ Quantora Search Engine")
+    st.subheader("Intelligent Information Synthesis")
+
+    query = st.text_input("Enter your Quantora query:", "")
+
+    if query:
+        st.info(f"Quantora is processing your request for: '{query}'...")
+
+        # Fetch search results
+        results = fetch_quantora_results(query, API_KEY, SEARCH_ENGINE_ID, num=3) # Reduced number of text results
+
+        # Fetch image results
+        image_results = fetch_image_results(query, API_KEY, SEARCH_ENGINE_ID, num_images=3)
+
+        st.subheader("Quantora Insights:")
+        if results:
+            for i, result in enumerate(results):
+                title = result.get('title', 'No Title')
+                link = result.get('link', '#')
+                snippet = result.get('snippet', 'No Description')
+
+                st.markdown(f"<div class='st-emotion-cache-r421ms'><strong>{i+1}. {title}</strong></div>", unsafe_allow_html=True)
+                st.markdown(f"<p class='st-emotion-cache-10pw50'>{snippet}</p>", unsafe_allow_html=True)
+                if st.button(f"View: {link}", key=f"view_link_{i}"):
+                    st.session_state['inline_iframe_url'] = link
+                    # Force a rerun to display the iframe immediately after the button
+                    st.rerun()
+                if 'inline_iframe_url' in st.session_state and st.session_state['inline_iframe_url'] == link:
+                    st.markdown(f"<div class='inline-iframe-container'><iframe src='{link}'></iframe></div>", unsafe_allow_html=True)
+                    del st.session_state['inline_iframe_url'] # Clear after displaying once
+                st.divider()
+        else:
+            st.warning("Quantora found no relevant insights for this query.")
+
+        if image_results:
+            st.subheader("Related Visual Media:")
+            st.markdown("<div class='image-container'>", unsafe_allow_html=True)
+            for image_result in image_results:
+                image_url = image_result.get('link')
+                if image_url:
+                    st.markdown(f"<img src='{image_url}' alt='Related Image'>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        elif query and not results: # Only show if a query was made and no text results
+            st.info("No related visual media found.")
+
+elif st.session_state['current_page'] == "visual_media":
+    st.title("🖼️ Quantora Visual Media Hub")
+    st.write("Content related to visual media will be displayed here.")
+    # Add your visual media specific content here
+
+elif st.session_state['current_page'] == "marketplace":
+    st.title("🛒 Quantora Marketplace")
+    st.write("Explore offerings in the Quantora marketplace.")
+    # Add your marketplace specific content here
